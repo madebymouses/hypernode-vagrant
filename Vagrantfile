@@ -78,7 +78,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
       # Configure A Private Network IP
       if settings["ip"] != "dhcp"
-          override.vm.network "private_network", ip: "172.28.128.102"
+          override.vm.network "private_network", ip: settings["ip"] ||= "172.28.128.102"
       else
           override.vm.network "private_network", type: "dhcp"
       end
