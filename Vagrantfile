@@ -21,7 +21,7 @@ settings = YAML.load_file(SETTINGS_FILE) rescue Hash.new(Hash.new(nil))
 require_relative 'vagrant/plugins/inline/ensure-varnish.rb'
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # run hypernode-vagrant configuration wizard if needed during 'vagrant up'
-  config.hypconfigmgmt.enabled = true  
+  config.hypconfigmgmt.enabled = true
 
   config.ssh.forward_agent = true
 
@@ -64,8 +64,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       args: "-u %s -g %s" % [ `id -u`.strip(), `id -g`.strip() ]
     end
 
-    config.vm.provision "shell", 
-    path: "vagrant/provisioning/hypernode.sh", 
+    config.vm.provision "shell",
+    path: "vagrant/provisioning/hypernode.sh",
     args: "-m #{settings['magento']['version']} \
            -v #{settings['varnish']['state']} \
            -f #{settings['firewall']['state']} \
@@ -75,10 +75,34 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
            -p #{settings['php']['version']}" \
 
     config.vm.provider :virtualbox do |vbox, override|
-      override.vm.network "private_network", type: "dhcp"
-      override.vm.network "forwarded_port", guest: 80, host: 8080, auto_correct: true
-      override.vm.network "forwarded_port", guest: 3306, host: 3307, auto_correct: true
-      vbox.memory = 2048
+
+      # Configure A Private Network IP
+      if settings["ip"] != "dhcp"
+          override.vm.network "private_network", ip: "172.28.128.102"
+      else
+          override.vm.network "private_network", type: "dhcp"
+      end
+
+      # Standardize Ports Naming Schema
+      if (settings.has_key?("ports"))
+          settings["ports"].each do |port|
+              port["guest"] ||= port["to"]
+              port["host"] ||= port["send"]
+              port["protocol"] ||= "tcp"
+          end
+      else
+          settings["ports"] = []
+      end
+
+      # Add Custom Ports From Configuration
+      if settings.has_key?("ports")
+          settings["ports"].each do |port|
+              override.vm.network "forwarded_port", guest: port["guest"], host: port["host"], protocol: port["protocol"], auto_correct: true
+          end
+      end
+
+
+      vbox.memory = settings["memory"] ||= 2048
       vbox.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/v-root", "1"]
     end
 

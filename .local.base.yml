@@ -1,3 +1,8 @@
+memory: 2048
+ip: 172.28.128.102
+ports:
+- send: 8082
+  to: 80
 fs:
   folders:
     magento2:
